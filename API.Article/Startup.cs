@@ -1,18 +1,17 @@
+using System;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.OpenApi.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using API.Article.IdentityServer;
+using API.Article.Models;
 
-namespace API.Comment
+namespace API.Article
 {
     public class Startup
     {
@@ -34,24 +33,31 @@ namespace API.Comment
                 ["Angular"] = Configuration["ClientUrl:Angular"]
             };
 
-            services.AddDbContext<CommentDbContext>(options =>
+            services.AddDbContext<ArticleDbContext>(options =>
                 options.UseSqlServer(
                     Configuration.GetConnectionString("DefaultConnection")));
 
+            services.AddDefaultIdentity<User>()
+                .AddRoles<IdentityRole>()
+                .AddEntityFrameworkStores<ArticleDbContext>();
+            services.AddIdentityServer(options =>
+            {
+                options.Events.RaiseErrorEvents = true;
+                options.Events.RaiseInformationEvents = true;
+                options.Events.RaiseFailureEvents = true;
+                options.Events.RaiseSuccessEvents = true;
+            })
+                .AddInMemoryIdentityResources(IdentityServerConfig.Ids)
+                .AddInMemoryApiResources(IdentityServerConfig.Apis)
+                .AddInMemoryClients(IdentityServerConfig.Clients(clientUrls))
+                .AddAspNetIdentity<User>()
+                .AddDeveloperSigningCredential(); // not recommended for production - you need to store your key material somewhere secure
 
-            services.AddAuthentication();
-                //.AddOpenIdConnect("oidc", options =>
-                //{
-                //    options.Authority = "https://localhost:5001";
-
-                //    options.ClientId = "comment";
-                //    options.ClientSecret = "secret";
-                //    options.ResponseType = "code";
-
-                //    options.Scope.Add("api.article");
-
-                //    options.SaveTokens = true;
-                //});
+            services.AddAuthentication()
+                .AddLocalApi("Bearer", option =>
+                {
+                    option.ExpectedScope = "api.article";
+                });
 
             services.AddAuthorization(options =>
             {
@@ -125,6 +131,7 @@ namespace API.Comment
             app.UseRouting();
             app.UseSwagger();
 
+            app.UseIdentityServer();
             app.UseAuthorization();
             app.UseSwaggerUI(c =>
             {

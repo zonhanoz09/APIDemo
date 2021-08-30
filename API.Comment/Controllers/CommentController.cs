@@ -6,16 +6,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace API.Article.Controllers
+namespace API.Comment.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
     [Authorize("Bearer")]
     public class CommentController : ControllerBase
     {
-        private readonly ArticleDbContext _context;
+        private readonly CommentDbContext _context;
 
-        public CommentController(ArticleDbContext context)
+        public CommentController(CommentDbContext context)
         {
             _context = context;
         }

@@ -10,7 +10,6 @@ namespace API.Article
     {
         public DbSet<Article> Articles { get; set; }
 
-        public DbSet<Comment> Comments { get; set; }
 
 
         public ArticleDbContext(DbContextOptions<ArticleDbContext> options)
@@ -22,25 +21,9 @@ namespace API.Article
         {
             base.OnModelCreating(modelBuilder);
 
-            modelBuilder.Entity<Comment>()
-                .HasOne(pc => pc.Article);
-
             modelBuilder.Entity<User>()
                 .ToTable("AspNetUsers");
         }
-    }
-
-    public class Comment
-    {
-        public int Id { get; set; }
-
-        public string Content { get; set; }
-
-        public DateTime Datetime { get; set; }
-
-        public int ArticleId { get; set; }
-
-        public Article Article { get; set; }
     }
 
     public class Article
