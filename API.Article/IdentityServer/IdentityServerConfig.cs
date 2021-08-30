@@ -16,7 +16,8 @@ namespace API.Article.IdentityServer
         public static IEnumerable<ApiResource> Apis =>
             new ApiResource[]
             {
-                new ApiResource("api.article", "Article API")
+                new ApiResource("api.article", "Article API"),
+                new ApiResource("api.comment", "Comment API")
             };
 
         public static IEnumerable<Client> Clients(Dictionary<string, string> clientUrls) =>
@@ -47,41 +48,7 @@ namespace API.Article.IdentityServer
                     {
                         IdentityServerConstants.StandardScopes.OpenId,
                         IdentityServerConstants.StandardScopes.Profile,
-                        "api.article"
-                    }
-                },
-                new Client
-                {
-                    ClientName = "angular_code_client",
-                    ClientId = "angular_code_client",
-                    AccessTokenType = AccessTokenType.Reference,
-                    AllowedGrantTypes = GrantTypes.Code,
-                    AllowAccessTokensViaBrowser = true,
-
-                    RequireClientSecret = false,
-                    RequireConsent = false,
-                    RequirePkce = true,
-
-                    RedirectUris = new List<string>
-                    {
-                        $"{clientUrls["Angular"]}/authentication/login-callback",
-                        $"{clientUrls["Angular"]}/silent-renew.html",
-                        $"{clientUrls["Angular"]}"
-                    },
-                    PostLogoutRedirectUris = new List<string>
-                    {
-                        $"{clientUrls["Angular"]}/unauthorized",
-                        $"{clientUrls["Angular"]}/authentication/logout-callback",
-                        $"{clientUrls["Angular"]}"
-                    },
-                    AllowedCorsOrigins = new List<string>
-                    {
-                        $"{clientUrls["Angular"]}"
-                    },
-                    AllowedScopes = new List<string>
-                    {
-                        IdentityServerConstants.StandardScopes.OpenId,
-                        IdentityServerConstants.StandardScopes.Profile,
+                        "api.comment",
                         "api.article"
                     }
                 }

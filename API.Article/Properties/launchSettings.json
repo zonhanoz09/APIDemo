@@ -18,7 +18,7 @@
     "API.Article": {
       "commandName": "Project",
       "launchBrowser": true,
-      "applicationUrl": "https://localhost:44349;http://localhost:53456",
+      "applicationUrl": "https://localhost:5002;http://localhost:50002",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }

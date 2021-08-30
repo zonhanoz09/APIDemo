@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System;
 using System.Collections.Generic;
@@ -16,8 +18,6 @@ namespace API.Comment
 {
     public class Startup
     {
-        readonly string MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
-
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -28,57 +28,40 @@ namespace API.Comment
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            var clientUrls = new Dictionary<string, string>
-            {
-                ["Swagger"] = Configuration["ClientUrl:Swagger"],
-                ["Angular"] = Configuration["ClientUrl:Angular"]
-            };
 
             services.AddDbContext<CommentDbContext>(options =>
                 options.UseSqlServer(
                     Configuration.GetConnectionString("DefaultConnection")));
 
-
-            services.AddAuthentication();
-                //.AddOpenIdConnect("oidc", options =>
-                //{
-                //    options.Authority = "https://localhost:5001";
-
-                //    options.ClientId = "comment";
-                //    options.ClientSecret = "secret";
-                //    options.ResponseType = "code";
-
-                //    options.Scope.Add("api.article");
-
-                //    options.SaveTokens = true;
-                //});
-
-            services.AddAuthorization(options =>
-            {
-                options.AddPolicy("Bearer", policy =>
+            // accepts any access token issued by identity server
+            services.AddAuthentication(options =>
                 {
-                    policy.AddAuthenticationSchemes("Bearer");
-                    policy.RequireAuthenticatedUser();
+                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+
+                })
+                .AddJwtBearer("Bearer", options =>
+                {
+                    options.Authority = "https://localhost:5002";
+                    options.RequireHttpsMetadata = false;
+                    options.Audience = "api.comment";
                 });
-            });
 
             services.AddCors(options =>
             {
-                options.AddPolicy(MyAllowSpecificOrigins,
-                builder =>
-                {
-                    builder.WithOrigins()
-                        .AllowAnyHeader()
-                        .AllowAnyMethod();
-                });
+                options.AddPolicy("CorsPolicy",
+                    builder => builder
+                    .SetIsOriginAllowed((host) => true)
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+                    .AllowCredentials());
             });
 
             services.AddControllersWithViews();
-            services.AddRazorPages();
 
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Article API", Version = "v1" });
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Comment API", Version = "v1" });
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
                     Type = SecuritySchemeType.OAuth2,
@@ -86,9 +69,9 @@ namespace API.Comment
                     {
                         AuthorizationCode = new OpenApiOAuthFlow
                         {
-                            TokenUrl = new Uri("/connect/token", UriKind.Relative),
-                            AuthorizationUrl = new Uri("/connect/authorize", UriKind.Relative),
-                            Scopes = new Dictionary<string, string> { { "api.article", "Article API" } }
+                            TokenUrl = new Uri($"https://localhost:5002/connect/token"),
+                            AuthorizationUrl = new Uri($"https://localhost:5002/connect/authorize"),
+                            Scopes = new Dictionary<string, string> { { "api.comment", "Comment API" } }
                         },
                     },
                 });
@@ -99,7 +82,7 @@ namespace API.Comment
                         {
                             Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
                         },
-                        new List<string>{ "api.article" }
+                        new List<string>{ "api.comment" }
                     }
                 });
             });
@@ -123,6 +106,7 @@ namespace API.Comment
             app.UseStaticFiles();
 
             app.UseRouting();
+            app.UseCors("CorsPolicy");
             app.UseSwagger();
 
             app.UseAuthorization();
@@ -134,14 +118,9 @@ namespace API.Comment
                 c.SwaggerEndpoint("/swagger/v1/swagger.json", "Article API V1");
             });
 
-            app.UseCors(MyAllowSpecificOrigins);
-
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapControllerRoute(
-                    name: "default",
-                    pattern: "{controller=Home}/{action=Index}/{id?}");
-                endpoints.MapRazorPages();
+                endpoints.MapControllers();
             });
         }
     }

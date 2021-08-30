@@ -9,7 +9,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using API.Article.IdentityServer;
-using API.Article.Models;
 
 namespace API.Article
 {

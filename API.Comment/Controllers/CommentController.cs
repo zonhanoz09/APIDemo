@@ -10,7 +10,7 @@ namespace API.Comment.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize("Bearer")]
+    [Authorize]
     public class CommentController : ControllerBase
     {
         private readonly CommentDbContext _context;
