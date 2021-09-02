@@ -33,94 +33,43 @@ namespace API.Comment
                 options.UseSqlServer(
                     Configuration.GetConnectionString("DefaultConnection")));
 
-            // accepts any access token issued by identity server
-            services.AddAuthentication(options =>
-                {
-                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            services.AddControllers();
 
-                })
+            // accepts any access token issued by identity server
+            services.AddAuthentication("Bearer")
                 .AddJwtBearer("Bearer", options =>
                 {
-                    options.Authority = "https://localhost:5002";
-                    options.RequireHttpsMetadata = false;
-                    options.Audience = "api.comment";
+                    options.Authority = "https://localhost:5001";
+
+                    options.TokenValidationParameters = new TokenValidationParameters
+                    {
+                        ValidateAudience = false
+                    };
                 });
 
-            services.AddCors(options =>
+            // adds an authorization policy to make sure the token is for scope 'api1'
+            services.AddAuthorization(options =>
             {
-                options.AddPolicy("CorsPolicy",
-                    builder => builder
-                    .SetIsOriginAllowed((host) => true)
-                    .AllowAnyMethod()
-                    .AllowAnyHeader()
-                    .AllowCredentials());
-            });
-
-            services.AddControllersWithViews();
-
-            services.AddSwaggerGen(c =>
-            {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "Comment API", Version = "v1" });
-                c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+                options.AddPolicy("ApiScope", policy =>
                 {
-                    Type = SecuritySchemeType.OAuth2,
-                    Flows = new OpenApiOAuthFlows
-                    {
-                        AuthorizationCode = new OpenApiOAuthFlow
-                        {
-                            TokenUrl = new Uri($"https://localhost:5002/connect/token"),
-                            AuthorizationUrl = new Uri($"https://localhost:5002/connect/authorize"),
-                            Scopes = new Dictionary<string, string> { { "api.comment", "Comment API" } }
-                        },
-                    },
-                });
-                c.AddSecurityRequirement(new OpenApiSecurityRequirement
-                {
-                    {
-                        new OpenApiSecurityScheme
-                        {
-                            Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
-                        },
-                        new List<string>{ "api.comment" }
-                    }
+                    policy.RequireAuthenticatedUser();
+                    policy.RequireClaim("scope", "comment");
                 });
             });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app)
         {
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-                app.UseDatabaseErrorPage();
-            }
-            else
-            {
-                app.UseExceptionHandler("/Home/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-                app.UseHsts();
-            }
-            app.UseHttpsRedirection();
-            app.UseStaticFiles();
-
             app.UseRouting();
-            app.UseCors("CorsPolicy");
-            app.UseSwagger();
 
+            app.UseAuthentication();
             app.UseAuthorization();
-            app.UseSwaggerUI(c =>
-            {
-                c.OAuthClientId("swagger");
-                c.OAuthClientSecret("secret");
-                c.OAuthUsePkce();
-                c.SwaggerEndpoint("/swagger/v1/swagger.json", "Article API V1");
-            });
 
             app.UseEndpoints(endpoints =>
             {
-                endpoints.MapControllers();
+                endpoints.MapControllers()
+                    .RequireAuthorization("ApiScope");
             });
         }
     }

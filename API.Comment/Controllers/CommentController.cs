@@ -1,16 +1,18 @@
 ﻿using API.Article.Models;
+using IdentityModel.Client;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
 
 namespace API.Comment.Controllers
 {
     [Route("api/[controller]")]
-    [ApiController]
     [Authorize]
+    [ApiController]
     public class CommentController : ControllerBase
     {
         private readonly CommentDbContext _context;
@@ -21,7 +23,6 @@ namespace API.Comment.Controllers
         }
 
         [HttpGet]
-        [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<CommentVm>>> GetComments()
         {
             return await _context.Comments
@@ -29,8 +30,31 @@ namespace API.Comment.Controllers
                 .ToListAsync();
         }
 
-        [HttpGet("{id}")]
+        [HttpGet("/api/token")]
         [AllowAnonymous]
+        public async Task <ActionResult<string>> GetToken()
+        {
+            var client = new HttpClient();
+
+            var disco = await client.GetDiscoveryDocumentAsync("https://localhost:5001");
+            if (disco.IsError)
+            {
+                return null;
+            }
+
+            // request token
+            var tokenResponse = await client.RequestClientCredentialsTokenAsync(new ClientCredentialsTokenRequest
+            {
+                Address = disco.TokenEndpoint,
+                ClientId = "client",
+                ClientSecret = "secret",
+
+                Scope = "comment"
+            });
+            return tokenResponse.AccessToken;
+        }
+
+        [HttpGet("{id}")]
         public async Task<ActionResult<CommentVm>> GetComment(int id)
         {
             var comment = await _context.Comments.FindAsync(id);
@@ -50,8 +74,7 @@ namespace API.Comment.Controllers
             return commentVm;
         }
 
-        [HttpGet("/api/comment/article/:id")]
-        [AllowAnonymous]
+        [HttpGet("{id}/article")]
         public async Task<ActionResult<IEnumerable<CommentVm>>> GetCommentByArticleId(int id)
         {
             var comments = await _context.Comments.Where(x => x.ArticleId == id)
